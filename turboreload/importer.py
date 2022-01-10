@@ -12,6 +12,9 @@ updated_modules = {}
 
 
 def get_imports_from_file(file_path) -> dict[str, str]:
+    if "<" in file_path and ">" in file_path:
+        return {}
+
     imports = defaultdict(list)
 
     with open(file_path) as f:
@@ -114,6 +117,13 @@ class UpdatableModule(ModuleType):
     @property
     def __reset_module__(self):
         return self._updatable_module_get_module().__reset_module__
+
+    def __dir__(self):
+        return self._updatable_module_get_module().__dir__()
+
+    @property
+    def __all__(self):
+        return [n for n in dir(self) if not n.startswith("_")]
 
 
 @importhook.on_import(importhook.ANY_MODULE)

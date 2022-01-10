@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 
-from polls.constants import HELLO_MARK
+from polls.constants import *
 
 from . import slow_import
 
