@@ -3,31 +3,18 @@ import multiprocessing
 import os
 from pathlib import Path
 import threading
+import weakref
 from django.utils import autoreload
 import logging
 import sys
 import importlib
 import inspect
 
+from turboreload import importer
+from turboreload.util import reload_module_by_path
+
 
 logger = autoreload.logger
-
-
-def reload_module_by_path(path: Path):
-    # module_name = inspect.getmodulename(path)
-    path_parts: list[str] = str(path).removesuffix(path.suffix).split(os.path.sep)
-
-    module_path = []
-    for path_part in path_parts[::-1]:
-        module_path.insert(0, path_part)
-
-        module_name = ".".join(module_path)
-
-        logger.info(f"Checking {module_name}")
-        if module_name in sys.modules:
-            logger.info(f"Reloading {module_name}")
-            sys.modules[module_name] = importlib.reload(sys.modules[module_name])
-            return
 
 
 class TurboreloadException(Exception):
@@ -42,6 +29,35 @@ class BaseTurboReloader:
             logger.info("%s changed, reloading.", path)
             reload_module_by_path(path)
             raise TurboreloadException()
+
+    def watched_files(self, include_globs=True):
+        """
+        Yield all files that need to be watched, including module files and
+        files within globs.
+        """
+        yield from iter_all_python_module_files()
+        yield from self.extra_files
+        if include_globs:
+            for directory, patterns in self.directory_globs.items():
+                for pattern in patterns:
+                    yield from directory.glob(pattern)
+
+
+modules_and_files = frozenset()
+
+
+def iter_all_python_module_files():
+    # This is a hot path during reloading. Create a stable sorted list of
+    # modules based on the module name and pass it to iter_modules_and_files().
+    # This ensures cached results are returned in the usual case that modules
+    # aren't loaded on the fly.
+    global modules_and_files
+
+    keys = sorted(sys.modules)
+    modules = tuple(m for m in map(sys.modules.__getitem__, keys) if not isinstance(m, weakref.ProxyTypes))
+    modules_and_files |= autoreload.iter_modules_and_files(modules, frozenset(autoreload._error_files))
+
+    return modules_and_files
 
 
 class WatchmanReloader(BaseTurboReloader, autoreload.WatchmanReloader):
@@ -62,6 +78,7 @@ def get_reloader():
 
 
 def run_with_reloader(main_func, *args, **kwargs):
+    # importer.install()
     reloader = get_reloader()
 
     while True:

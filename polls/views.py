@@ -1,10 +1,15 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 
+from polls.constants import HELLO_MARK
+
 from . import slow_import
 
-print("def")
+CONSTANT = "Test!3"
 
 
 def index(request):
-    return HttpResponse("Hello, world2!")
+    return HttpResponse(HELLO_MARK)
+
+
+print("hi")

@@ -7,6 +7,7 @@ authors = ["Phillip Cutter <mrfleap@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.10"
 Django = "^4.0.1"
+importhook = "^1.0.9"
 
 [tool.poetry.dev-dependencies]
 black = {version = "^21.12b0", allow-prereleases = true}
